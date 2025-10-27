@@ -31,10 +31,6 @@ pieces = {'p': pygame.image.load(path+'b_pawn.png').convert_alpha(),
 
 
 def draw_board(scrn, board):
-    """מצייר את הלוח הירוק-לבן והכלים"""
-    light = (240, 217, 181)  # לבן-בהיר
-    dark = (181, 136, 99)    # ירוק-כהה כמו ב-chess.com
-
     for row in range(8):
         for col in range(8):
             color = light_square if (row + col) % 2 == 0 else dark_square
