@@ -1,5 +1,6 @@
 import json
 import chess
+import random
 import numpy as np
 
 import torch
@@ -35,6 +36,7 @@ def model_prep():
     model.eval()
     return model, idx2move
 
+
 def fen_to_tensor(fen):
     board = chess.Board(fen)
     mat = np.zeros((8,8,12), dtype=np.float32)
@@ -48,24 +50,38 @@ def fen_to_tensor(fen):
     mat = np.concatenate([mat, turn_channel], axis=-1)
     return mat
 
-def choose_move(board, move2idx, probs):
+
+def choose_move(board, move2idx, probs, model, alpha=0.5):
+    
     legal_moves = list(board.legal_moves)
-    best_move = legal_moves[0]
+    best_move = random.choice(legal_moves)
     best_score = -float('inf')
 
     for move in legal_moves:
-        move_str = str(move)
-
+        move_str = str(move).lower()
         if move_str in move2idx:
             move_score = probs[move2idx[move_str]]
-            if move_score > best_score:
-                best_score = move_score
-                best_move = move
-    
-    return best_move
 
+            temp_board = board.copy()
+            temp_board.push(move)
+
+            board_tensor = torch.tensor(fen_to_tensor(temp_board.fen()), dtype=torch.float32)
+            board_tensor = board_tensor.permute(2, 0, 1).unsqueeze(0).to(next(model.parameters()).device)
+
+            with torch.no_grad():
+                _, pred_eval = model(board_tensor)
+                pred_eval = pred_eval.item()
+
+            combined_score = move_score + alpha * pred_eval
+
+            if combined_score > best_score:
+                best_score = combined_score
+                best_move = move
+
+    return chess.Move(chess.square_mirror(best_move.from_square),chess.square_mirror(best_move.to_square))
 
 def model_move(board):
+    board = board.mirror()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model, move2idx =  model_prep()
 
@@ -78,5 +94,5 @@ def model_move(board):
         logits_move, pred_eval = model(board_tensor)
         probs = torch.softmax(logits_move, dim=1).cpu().numpy().flatten()
 
-        return choose_move(board,move2idx, probs)
+        return choose_move(board,move2idx, probs, model)
         
