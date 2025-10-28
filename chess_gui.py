@@ -1,7 +1,7 @@
 import math
 import chess
 import pygame
-from chess_game import model_move
+from chess_game import model_vs_human
 
 
 pygame.init()
@@ -59,7 +59,7 @@ def main(board, human_color=chess.WHITE):
 
         # bot turn
         if board.turn != human_color and not board.outcome():
-            ai_move = model_move(board)
+            ai_move = model_vs_human(board)
             if ai_move:
                 board.push(ai_move)
             continue 
@@ -91,7 +91,6 @@ def main(board, human_color=chess.WHITE):
                         pygame.draw.rect(scrn, BLUE, pygame.Rect(tx, ty, 100, 100), 5)
                     pygame.display.flip()
 
-        # בדיקה אם המשחק נגמר
         if board.outcome():
             print(board.outcome())
             running = False
