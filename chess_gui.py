@@ -59,7 +59,7 @@ def main(board, human_color=chess.WHITE):
 
         # bot turn
         if board.turn != human_color and not board.outcome():
-            ai_move = model_vs_human(board)
+            ai_move = model_vs_human(board, 2)
             if ai_move:
                 board.push(ai_move)
             continue 
