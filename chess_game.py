@@ -111,28 +111,32 @@ def model_vs_model():
 
 def model_game(times=10):
     data = {"fens":[],"moves":[],"score":[]}
-    flag = True
-    for i in range(times):
+    count=0
+    while len(data["fens"])<10000:
+    # for i in range(times):
+
+        flag = True
         outcome, fens, moves = model_vs_model() 
         score = [1 if i%2==0 else -1 for i in range(len(fens))]
-        if outcome:
-            if outcome.winner == chess.BLACK:
-                tmp = score.pop(0)
-                score.append(-1*score[-1]) 
-            elif outcome.winner != chess.WHITE:
-                flag = False
-                score = [0 for _ in range(len(fens))]
+        if outcome.winner == chess.BLACK:
+            tmp = score.pop(0)
+            score.append(-1*score[-1])
+        elif outcome.winner != chess.WHITE:
+            flag = False
+            # score = [0 for _ in range(len(fens))]
         if flag:
             data["fens"].extend(fens)
             data["moves"].extend(moves)
             data["score"].extend(score)
+            print(len(data["fens"]))
 
     df = pd.DataFrame(data)
+    print(len(df))
     df.to_csv("chess_positions_new.csv", index=False)
 
 
 def main():
-    model_game(3)
+    model_game()
 
 if __name__ == "__main__":
     main()
