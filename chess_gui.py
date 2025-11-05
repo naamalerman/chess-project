@@ -47,7 +47,7 @@ def draw_board(scrn, board):
 
 
 
-def main(board, human_color=chess.WHITE):
+def main(board, human_color=chess.WHITE, document=False):
     running = True
     index_moves = []
     moves = []
@@ -99,4 +99,4 @@ def main(board, human_color=chess.WHITE):
 
 
 if __name__ == "__main__":
-    main(b)
+    main(b, True)

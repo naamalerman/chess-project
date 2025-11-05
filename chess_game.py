@@ -143,7 +143,7 @@ def model_vs_human(board, type=1):
         model, move2idx =  model_prep("move_idx.json","chess_model.pth")
         return make_move(board, model, device, move2idx)
     else:
-        model, move2idx =  model_prep("move_idx_new.json","chess_model_games.pth", 2)
+        model, move2idx =  model_prep("move_idx_new2.json","chess_model_games2.pth", 2)
         return make_move_v2(board, model, device, move2idx)
 
 
@@ -151,7 +151,7 @@ def model_vs_human(board, type=1):
 def model_vs_model():
     fens, moves = [], []
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model1, move2idx1 =  model_prep("move_idx_new.json","chess_model_games.pth", 2)
+    model1, move2idx1 =  model_prep("move_idx_new2.json","chess_model_games2.pth", 2)
     model2, move2idx2 =  model_prep("move_idx.json","chess_model.pth")
 
     board = chess.Board()
@@ -159,11 +159,12 @@ def model_vs_model():
         if board.turn == chess.BLACK:
             move =  make_move_v2(board, model1, device, move2idx1)
         else:
-            if random.randint(0,1)==0:
-                legal_moves = list(board.legal_moves)
-                move = legal_moves[random.randint(0, len(legal_moves)-1)]
-            else:
-                move = make_move(board, model2, device, move2idx2)
+            # if random.randint(0,1)==0:
+            #     legal_moves = list(board.legal_moves)
+            #     move = legal_moves[random.randint(0, len(legal_moves)-1)]
+            # else:
+            #     move = make_move(board, model2, device, move2idx2)
+            move = make_move(board, model2, device, move2idx2)
         fens.append(board.fen())
         moves.append(move)
         board.push(move)
@@ -171,8 +172,7 @@ def model_vs_model():
 
 
 def get_data():
-    data = {"fens":[],"moves":[],"score":[]}
-    count=0
+    data = {"fen":[],"move":[],"score":[]}
     while len(data["fens"])<20000:
         flag = True
         outcome, fens, moves = model_vs_model() 
@@ -180,14 +180,13 @@ def get_data():
         if outcome.winner == chess.BLACK:
             tmp = score.pop(0)
             score.append(-1*score[-1])
-            count+=1
         elif outcome.winner != chess.WHITE:
             flag = False
         if flag:
-            data["fens"].extend(fens)
-            data["moves"].extend(moves)
+            data["fen"].extend(fens)
+            data["move"].extend(moves)
             data["score"].extend(score)
-            print(len(data["fens"]))
+            print(len(data["fen"]))
 
     df = pd.DataFrame(data)
     print(len(df))
@@ -212,8 +211,8 @@ def evaluate_the_model(times=10):
 
 
 def main():
-    # evaluate_the_model(30)
-    get_data()
+    evaluate_the_model(30)
+    # get_data()
 
 if __name__ == "__main__":
     main()
