@@ -209,9 +209,24 @@ def evaluate_the_model(times=10):
     else:
         print("wins=0")
 
+def basic_states():
+    data = {"fen":[],"move":[],"score":[]}
+    states = []
+
+    for state in states:
+        board = chess.Board()
+        for move in state:
+            data["fen"].append(board.fen())
+            data["move"].append(move[0])
+            data["score"].append(move[1])
+
+    df = pd.DataFrame(data)
+    print(len(df))
+    df.to_csv("chess_positions_chat.csv", index=False)
 
 def main():
-    evaluate_the_model(30)
+    # evaluate_the_model(30)
+    basic_states()
     # get_data()
 
 if __name__ == "__main__":
