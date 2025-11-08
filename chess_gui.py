@@ -7,12 +7,11 @@ from chess_game import model_vs_human
 
 
 pygame.init()
-X, Y = 800, 850
+X, Y = 800, 800
 scrn = pygame.display.set_mode((X, Y))
 clock = pygame.time.Clock()
 
 BLUE, BLACK = (50,255,255), (0,0,0)
-GRAY = (200,200,200)
 light_square = (238, 238, 210)
 dark_square  = (118, 150, 86)
 
@@ -49,11 +48,6 @@ def draw_board(scrn, board):
             y = 700 - (i // 8) * 100
             scrn.blit(pieces[str(piece)], (x, y))
 
-    pygame.draw.rect(scrn, GRAY, rate_pos_btn)
-    pygame.draw.rect(scrn, GRAY, rate_neg_btn)
-    scrn.blit(font.render("Rate +1", True, BLACK), (rate_pos_btn.x + 50, rate_pos_btn.y + 5))
-    scrn.blit(font.render("Rate -1", True, BLACK), (rate_neg_btn.x + 50, rate_neg_btn.y + 5))
-
 
     pygame.display.flip()
 
@@ -67,9 +61,6 @@ def main(board, human_color=chess.WHITE, document=False):
     pygame.display.set_caption("Chess")
 
     while running:
-        score = 1
-        move = 0
-        fen = board.fen()
         clock.tick(30)
         draw_board(scrn, board)
 
@@ -77,48 +68,46 @@ def main(board, human_color=chess.WHITE, document=False):
         if board.turn != human_color and not board.outcome():
             ai_move = model_vs_human(board, 2)
             if ai_move:
-                move = ai_move
                 board.push(ai_move)
-                
-            continue 
 
-        # human turn
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-            elif event.type == pygame.MOUSEBUTTONDOWN:
-                pos = pygame.mouse.get_pos()
-                square = (math.floor(pos[0] / 100), math.floor(pos[1] / 100))
-                index = (7 - square[1]) * 8 + square[0]
-
-                if index in index_moves:
-                    move = moves[index_moves.index(index)]
-                    board.push(move)
-                    index_moves.clear()
-                else:
-                    piece = board.piece_at(index)
-                    if not piece or piece.color != human_color:
-                        continue
-                    all_moves = list(board.legal_moves)
-                    moves = [m for m in all_moves if m.from_square == index]
-                    index_moves = [m.to_square for m in moves]
-
-                    draw_board(scrn, board)
-                    for m in moves:
-                        tx, ty = (m.to_square % 8) * 100, (7 - m.to_square // 8) * 100
-                        pygame.draw.rect(scrn, BLUE, pygame.Rect(tx, ty, 100, 100), 5)
-                    pygame.display.flip()
-
+        else:
+            ai_move = model_vs_human(board, 1)
+            if ai_move:
+                board.push(ai_move)
+        time.sleep(0.5)
         if board.outcome():
             print(board.outcome())
             running = False
 
-        time.sleep(10)
-        if rate_neg_btn.collidepoint(pos):
-            score = -1
-        data["fen"].append(fen)
-        data["move"].append(move)
-        data["score"].append(score)
+        # human turn
+        # for event in pygame.event.get():
+        #     if event.type == pygame.QUIT:
+        #         running = False
+        #     elif event.type == pygame.MOUSEBUTTONDOWN:
+        #         pos = pygame.mouse.get_pos()
+        #         square = (math.floor(pos[0] / 100), math.floor(pos[1] / 100))
+        #         index = (7 - square[1]) * 8 + square[0]
+
+        #         if index in index_moves:
+        #             move = moves[index_moves.index(index)]
+        #             board.push(move)
+        #             index_moves.clear()
+        #         else:
+        #             piece = board.piece_at(index)
+        #             if not piece or piece.color != human_color:
+        #                 continue
+        #             all_moves = list(board.legal_moves)
+        #             moves = [m for m in all_moves if m.from_square == index]
+        #             index_moves = [m.to_square for m in moves]
+
+        #             draw_board(scrn, board)
+        #             for m in moves:
+        #                 tx, ty = (m.to_square % 8) * 100, (7 - m.to_square // 8) * 100
+        #                 pygame.draw.rect(scrn, BLUE, pygame.Rect(tx, ty, 100, 100), 5)
+        #             pygame.display.flip()
+        
+      
+
     pygame.quit()
     df = pd.DataFrame(data)
     df.to_csv("chess_positions_hunam.csv", index=False)

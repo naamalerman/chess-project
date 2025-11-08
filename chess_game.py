@@ -4,11 +4,14 @@ import random
 import numpy as np
 import pandas as pd
 
+from chess_move_score import *
+
 import torch
 import torch.nn as nn
 
 piece_map = {'P':0,'N':1,'B':2,'R':3,'Q':4,'K':5,
              'p':6,'n':7,'b':8,'r':9,'q':10,'k':11}
+
 
 class ChessMovePredictor(nn.Module):
     def __init__(self, num_moves):
@@ -49,6 +52,7 @@ class ChessMovePredictor_v2(nn.Module):
         eval_pred = torch.tanh(self.fc_eval(x)) 
         return move_logits, eval_pred
     
+
 def model_prep(move2idx_path, model_path, type=1):
     with open(move2idx_path, 'r') as f:
         move2idx = json.load(f)
@@ -74,88 +78,53 @@ def fen_to_tensor(fen):
     mat = np.concatenate([mat, turn_channel], axis=-1)
     return mat
 
-# for model with move and score
-def choose_move_v2(board, move2idx, probs, eval_score):
+
+def make_move(board, model, device, move2idx, type=1):
     legal_moves = list(board.legal_moves)
     best_move = None
     best_score = -float('inf')
-
-    for move in legal_moves:
-        move_str = move.uci()
-        if move_str in move2idx:
-            move_score = probs[move2idx[move_str]] + 0.8 * eval_score
-            if move_score > best_score:
-                best_score = move_score
-                best_move = move
-
-    if best_move is None:
-        best_move = legal_moves[0]
-
-    return best_move
-
-
-def choose_move(board, move2idx, probs):
+    with torch.no_grad():
+        board_tensor = torch.tensor(fen_to_tensor(board.fen()), dtype=torch.float32)
+        board_tensor = board_tensor.permute(2,0,1).unsqueeze(0).to(device)
+        if type == 1:
+            logits_move = model(board_tensor)
+        else:
+            logits_move, _ = model(board_tensor)
+        probs = torch.softmax(logits_move, dim=1).cpu().numpy().flatten()
     
-    legal_moves = list(board.legal_moves)
-    best_move = None
-    best_score = -float('inf')
     for move in legal_moves:
-        move_str = move.uci()
-        if move_str in move2idx.keys():
-            move_score = probs[move2idx[move_str]]
-            if move_score > best_score:
-                best_score = move_score
-                best_move = move
-
-    if best_move == None:
-        best_move = legal_moves[0]
-
+        move_score = calc_weight(board, model, board_tensor, move2idx, move, probs, type=1)
+        if move_score > best_score:
+            best_score = move_score
+            best_move = move
     return best_move
-
-# for model with move and score
-def make_move_v2(board, model, device, move2idx):
-    with torch.no_grad():
-        board_tensor = torch.tensor(fen_to_tensor(board.fen()), dtype=torch.float32)
-        board_tensor = board_tensor.permute(2, 0, 1).unsqueeze(0).to(device)
-
-        logits_move, pred_eval = model(board_tensor)
-
-        probs = torch.softmax(logits_move, dim=1).cpu().numpy().flatten()
-        eval_score = pred_eval.item()
-
-        return choose_move_v2(board, move2idx, probs, eval_score)
-
-
-def make_move(board, model, device, move2idx):
-    with torch.no_grad():
-        board_tensor = torch.tensor(fen_to_tensor(board.fen()), dtype=torch.float32)
-        board_tensor = board_tensor.permute(2, 0, 1).unsqueeze(0).to(device)
-
-        logits_move = model(board_tensor)
-        probs = torch.softmax(logits_move, dim=1).cpu().numpy().flatten()
-
-        return choose_move(board,move2idx, probs)
 
 
 def model_vs_human(board, type=1):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    # if random.randint(0,15)==0:
+    #     legal_moves = list(board.legal_moves)
+    #     return legal_moves[random.randint(0, len(legal_moves)-1)]
     if type==1:
         model, move2idx =  model_prep("move_idx.json","chess_model.pth")
-        return make_move(board, model, device, move2idx)
     else:
-        model, move2idx =  model_prep("move_idx_new2.json","chess_model_games2.pth", 2)
-        return make_move_v2(board, model, device, move2idx)
+        model, move2idx =  model_prep("move_idx_new3.json","chess_model_games4.pth", 2)
+    return make_move(board, model, device, move2idx, type)
 
+
+def end_game(board):
+    return board.is_game_over() or board.is_stalemate() or board.is_fifty_moves() or board.is_insufficient_material()
 
     
 def model_vs_model():
     fens, moves = [], []
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model1, move2idx1 =  model_prep("move_idx_new2.json","chess_model_games2.pth", 2)
+    model1, move2idx1 =  model_prep("move_idx_new3.json","chess_model_games4.pth", 2)
     model2, move2idx2 =  model_prep("move_idx.json","chess_model.pth")
 
     board = chess.Board()
-    while not board.is_game_over():
+    while not end_game(board):
+        
         if board.turn == chess.BLACK:
             move =  make_move_v2(board, model1, device, move2idx1)
         else:
@@ -225,8 +194,8 @@ def basic_states():
     df.to_csv("chess_positions_chat.csv", index=False)
 
 def main():
-    # evaluate_the_model(30)
-    basic_states()
+    evaluate_the_model(30)
+    # basic_states()
     # get_data()
 
 if __name__ == "__main__":
